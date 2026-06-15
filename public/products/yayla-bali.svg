@@ -1,0 +1,15 @@
+<svg width="800" height="600" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="600" fill="#FFF8E4"/>
+  <circle cx="650" cy="110" r="78" fill="#F4CA68"/>
+  <path d="M0 374c96-78 196-98 300-59 71 26 141 27 210 2 95-34 191-26 290 25v258H0V374Z" fill="#7E962B"/>
+  <path d="M0 430c139-98 266-116 382-53 119 65 258 66 418 5v218H0V430Z" fill="#124C2F"/>
+  <path d="M31 470c120-82 231-96 333-42 122 64 254 67 397 8" stroke="#D5A23B" stroke-width="34" stroke-linecap="round"/>
+  <path d="M242 150h316l-28 321H270L242 150Z" fill="#F3B231"/>
+  <path d="M270 192h260l-20 238H290l-20-238Z" fill="#FFE0A1"/>
+  <path d="M315 94h170l24 65H291l24-65Z" fill="#3B230D"/>
+  <rect x="331" y="245" width="138" height="101" rx="10" fill="#FFF7D4" stroke="#C58A2A" stroke-width="8"/>
+  <text x="400" y="294" text-anchor="middle" font-family="Georgia, serif" font-size="33" font-weight="900" fill="#3B230D">Yayla</text>
+  <text x="400" y="327" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="800" fill="#124C2F">Balı</text>
+  <path d="M522 114c44 7 77 36 98 86" stroke="#124C2F" stroke-width="12" stroke-linecap="round"/>
+  <path d="M218 130c-37 10-65 34-84 72" stroke="#124C2F" stroke-width="12" stroke-linecap="round"/>
+</svg>
