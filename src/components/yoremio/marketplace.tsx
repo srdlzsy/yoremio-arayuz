@@ -158,6 +158,10 @@ function sellerName(product: ProductDto) {
   return product.saticiMagazaAdi ?? "Yöremio satıcısı";
 }
 
+function conversationName(conversation?: ChatConversationDto | null) {
+  return conversation?.userName ?? conversation?.email ?? "Yöremio kullanıcısı";
+}
+
 function productLocation(product: ProductDto) {
   const parts = [product.saticiSehir, product.saticiIlce].filter(Boolean);
   return parts.length > 0 ? parts.join(" / ") : "Konum belirtilmedi";
@@ -183,6 +187,7 @@ export function YoremioMarketplace() {
   const [marketState, setMarketState] = useState<LoadState>("idle");
   const [marketError, setMarketError] = useState<string | null>(null);
   const [activeProductId, setActiveProductId] = useState<number | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [productDetail, setProductDetail] = useState<ProductDto | null>(null);
   const [trustScore, setTrustScore] = useState<SellerTrustScoreDto | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
@@ -387,6 +392,7 @@ export function YoremioMarketplace() {
         if (normalizedPage.items.length === 0) {
           setActiveProductId(null);
           setProductDetail(null);
+          setDetailOpen(false);
           return;
         }
 
@@ -399,6 +405,7 @@ export function YoremioMarketplace() {
         setProductsPage(emptyProductsResult(page));
         setActiveProductId(null);
         setProductDetail(null);
+        setDetailOpen(false);
         setMarketState("error");
         setMarketError(apiErrorMessage(error));
       });
@@ -732,6 +739,7 @@ export function YoremioMarketplace() {
       await refreshRoleData();
       await refreshSelectedProduct(product.id);
       setActiveProductId(product.id);
+      setDetailOpen(true);
       showToast(productId ? "Ürün güncellendi." : "Ürün eklendi.", "success");
     } catch (error) {
       showToast(apiErrorMessage(error), "error");
@@ -753,6 +761,11 @@ export function YoremioMarketplace() {
         ...current,
         items: current.items.filter((product) => product.id !== urunId),
       }));
+      if (activeProductId === urunId) {
+        setActiveProductId(null);
+        setProductDetail(null);
+        setDetailOpen(false);
+      }
       showToast("Ürün silindi.", "success");
     } catch (error) {
       showToast(apiErrorMessage(error), "error");
@@ -855,6 +868,12 @@ export function YoremioMarketplace() {
     if (!requireAuth()) return;
     setChatTargetId(sellerId);
     setWorkspace("chat");
+    setDetailOpen(false);
+    window.setTimeout(() => {
+      document.getElementById("paneller")?.scrollIntoView({
+        behavior: "smooth",
+      });
+    }, 50);
   };
 
   const handleSendMessage = async (receiverId: string, message: string) => {
@@ -1063,7 +1082,7 @@ export function YoremioMarketplace() {
               </div>
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_450px]">
+            <div className="space-y-5">
               <div className="space-y-5">
                 {productsPage.items.length > 0 ? (
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
@@ -1076,7 +1095,10 @@ export function YoremioMarketplace() {
                         )}
                         active={product.id === selectedProduct?.id}
                         isFavorite={favoriteIds.has(product.id)}
-                        onSelect={() => setActiveProductId(product.id)}
+                        onSelect={() => {
+                          setActiveProductId(product.id);
+                          setDetailOpen(true);
+                        }}
                       />
                     ))}
                   </div>
@@ -1104,27 +1126,6 @@ export function YoremioMarketplace() {
                   />
                 ) : null}
               </div>
-
-              {selectedProduct ? (
-                <ProductDetail
-                  product={selectedProduct}
-                trustScore={trustScore}
-                category={categories.find(
-                  (category) => category.id === selectedProduct.kategoriId,
-                )}
-                authUser={authUser}
-                isFavorite={favoriteIds.has(selectedProduct.id)}
-                actionStatus={actionStatus}
-                onFavorite={handleFavorite}
-                onDemand={handleDemand}
-                onRate={handleRating}
-                onComment={handleComment}
-                onDeleteComment={handleDeleteComment}
-                  onOpenChat={handleOpenChat}
-                />
-              ) : (
-                <MarketDetailEmpty onSellerPanelClick={openSellerWorkspace} />
-              )}
             </div>
           </div>
         </section>
@@ -1152,9 +1153,7 @@ export function YoremioMarketplace() {
             onLogin={() => setAuthOpen(true)}
             onSelectProduct={(id) => {
               setActiveProductId(id);
-              document.getElementById("kesif")?.scrollIntoView({
-                behavior: "smooth",
-              });
+              setDetailOpen(true);
             }}
             onDemand={handleDemand}
             onAcceptOffer={handleAcceptOffer}
@@ -1170,6 +1169,30 @@ export function YoremioMarketplace() {
           />
         </section>
       </main>
+
+      {selectedProduct ? (
+        <ProductDetailDialog
+          open={detailOpen}
+          onClose={() => setDetailOpen(false)}
+        >
+          <ProductDetail
+            product={selectedProduct}
+            trustScore={trustScore}
+            category={categories.find(
+              (category) => category.id === selectedProduct.kategoriId,
+            )}
+            authUser={authUser}
+            isFavorite={favoriteIds.has(selectedProduct.id)}
+            actionStatus={actionStatus}
+            onFavorite={handleFavorite}
+            onDemand={handleDemand}
+            onRate={handleRating}
+            onComment={handleComment}
+            onDeleteComment={handleDeleteComment}
+            onOpenChat={handleOpenChat}
+          />
+        </ProductDetailDialog>
+      ) : null}
 
       {toast ? <Toast toast={toast} onClose={() => setToast(null)} /> : null}
 
@@ -1226,17 +1249,14 @@ function AppHeader({
   onLogout: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-white/95 shadow-[0_10px_35px_rgba(32,24,15,0.06)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/95 shadow-[0_8px_30px_rgba(32,24,15,0.05)] backdrop-blur-xl">
       <div className="mx-auto flex h-[76px] max-w-[1680px] items-center justify-between gap-3 px-4 sm:px-6">
         <BrandLogo compact />
-        <nav className="hidden items-center rounded-md border border-border bg-background p-1 text-sm font-semibold text-muted-foreground lg:flex">
-          <a className="rounded-md px-3 py-2 transition hover:bg-white hover:text-primary" href="#kesif">
+        <nav className="hidden items-center gap-1 rounded-md border border-border bg-background/80 p-1 text-sm font-semibold text-muted-foreground lg:flex">
+          <a className="rounded-md px-4 py-2 transition hover:bg-white hover:text-primary" href="#kesif">
             Pazar
           </a>
-          <a className="rounded-md px-3 py-2 transition hover:bg-white hover:text-primary" href="#detay">
-            Detay
-          </a>
-          <a className="rounded-md px-3 py-2 transition hover:bg-white hover:text-primary" href="#paneller">
+          <a className="rounded-md px-4 py-2 transition hover:bg-white hover:text-primary" href="#paneller">
             Panel
           </a>
         </nav>
@@ -1752,30 +1772,46 @@ function MarketEmptyState({
   );
 }
 
-function MarketDetailEmpty({
-  onSellerPanelClick,
+function ProductDetailDialog({
+  open,
+  onClose,
+  children,
 }: {
-  onSellerPanelClick: () => void;
+  open: boolean;
+  onClose: () => void;
+  children: ReactNode;
 }) {
+  if (!open) return null;
+
   return (
-    <aside className="h-fit rounded-lg border border-border bg-card p-5 shadow-[0_22px_55px_rgba(32,24,15,0.1)] xl:sticky xl:top-24">
-      <div className="rounded-lg border border-dashed border-border bg-white p-5">
-        <div className="grid size-12 place-items-center rounded-md bg-secondary text-primary">
-          <PackagePlus className="size-6" aria-hidden />
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/45 p-3 backdrop-blur-sm sm:p-5">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label="Detay panelini kapat"
+        onClick={onClose}
+      />
+      <div
+        className="relative ml-auto flex h-full w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-background shadow-[0_30px_100px_rgba(0,0,0,0.32)]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Ürün detayı"
+      >
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-white px-4">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Ürün detayı
+            </p>
+          </div>
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} title="Kapat">
+            <X aria-hidden />
+          </Button>
         </div>
-        <h3 className="mt-4 text-xl font-black text-brand-brown">
-          Detay için ürün bekleniyor
-        </h3>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Vitrin boşken fiyat, puan, yorum veya satıcı bilgisi uydurulmaz.
-          İlk gerçek ürün eklendiğinde bu panel otomatik dolacak.
-        </p>
-        <Button className="mt-5 w-full" variant="premium" onClick={onSellerPanelClick}>
-          <Store aria-hidden />
-          Satıcı paneline git
-        </Button>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-5">
+          {children}
+        </div>
       </div>
-    </aside>
+    </div>
   );
 }
 
@@ -1941,7 +1977,7 @@ function ProductDetail({
   return (
     <aside
       id="detay"
-      className="h-fit overflow-hidden rounded-lg border border-border bg-card shadow-[0_22px_55px_rgba(32,24,15,0.12)] xl:sticky xl:top-24"
+      className="overflow-hidden rounded-lg border border-border bg-card shadow-[0_22px_55px_rgba(32,24,15,0.12)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <Image
@@ -3183,6 +3219,11 @@ function ChatWorkspace({
   const selectedConversation = conversations.find(
     (conversation) => conversation.userId === currentTarget,
   );
+  const currentName = selectedConversation
+    ? conversationName(selectedConversation)
+    : selectedProduct
+      ? sellerName(selectedProduct)
+      : "Görüşme seçilmedi";
 
   if (!authUser) {
     return <LockedPanel role="ALICI" onLogin={onLogin} anyRole />;
@@ -3214,7 +3255,7 @@ function ChatWorkspace({
               >
                 <div className="flex items-center justify-between gap-3">
                   <p className="truncate font-semibold">
-                    {conversation.userName ?? conversation.email ?? conversation.userId}
+                    {conversationName(conversation)}
                   </p>
                   {conversation.unreadCount > 0 ? (
                     <span className="grid size-6 place-items-center rounded-full bg-accent text-xs font-black text-accent-foreground">
@@ -3245,12 +3286,10 @@ function ChatWorkspace({
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="min-w-0">
             <p className="truncate font-bold">
-              {selectedConversation?.userName ??
-                selectedConversation?.email ??
-                (selectedProduct ? sellerName(selectedProduct) : "Yeni görüşme")}
+              {currentName}
             </p>
             <p className="truncate text-sm text-muted-foreground">
-              {currentTarget}
+              {currentTarget ? "Güvenli mesajlaşma açık" : "Bir ürün detayından mesaj başlat"}
             </p>
           </div>
           <Badge variant="green">{signalRState}</Badge>
@@ -3275,13 +3314,17 @@ function ChatWorkspace({
             <EmptyState
               icon={MessageCircle}
               title="Mesaj geçmişi boş."
-              description="Satıcı veya alıcı userId'sine ilk mesajı gönderebilirsin."
+              description={
+                currentTarget
+                  ? "Bu görüşme için ilk mesajı yazabilirsin."
+                  : "Mesaj başlatmak için ürün detayında Mesaj butonunu kullan."
+              }
             />
           )}
         </div>
 
         <form
-          className="grid gap-2 border-t border-border p-3 sm:grid-cols-[260px_1fr_auto]"
+          className="grid gap-2 border-t border-border p-3 sm:grid-cols-[1fr_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             if (!draft.trim() || !currentTarget) return;
@@ -3290,15 +3333,15 @@ function ChatWorkspace({
           }}
         >
           <Input
-            value={currentTarget}
-            onChange={(event) => onTargetChange(event.target.value)}
-            placeholder="Alıcı/Satıcı userId"
-          />
-          <Input
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            placeholder="Mesaj yaz"
+            placeholder={
+              currentTarget
+                ? `${currentName} için mesaj yaz`
+                : "Önce ürün detayından mesaj başlat"
+            }
             maxLength={1000}
+            disabled={!currentTarget}
           />
           <Button disabled={actionStatus === "chat-send" || !currentTarget}>
             {actionStatus === "chat-send" ? (
