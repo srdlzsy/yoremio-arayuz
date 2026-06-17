@@ -2003,60 +2003,139 @@ function ProductDetail({
   const [note, setNote] = useState("Hafta sonu teslim alabilirim.");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const shownTrust = trustScore?.guvenSkoru ?? (product.saticiDogrulanmis ? 84 : 62);
+  const mediaItems = [
+    ...product.resimler.map((item) => ({ ...item, kind: "image" as const })),
+    ...product.videolar.map((item) => ({ ...item, kind: "video" as const })),
+  ];
+  const activeMedia = mediaItems[activeMediaIndex] ?? null;
 
   useEffect(() => {
     setMiktar(1);
     setComment("");
+    setActiveMediaIndex(0);
   }, [product.id]);
 
   return (
-    <aside
+    <section
       id="detay"
-      className="overflow-hidden rounded-lg border border-border bg-card shadow-[0_22px_55px_rgba(32,24,15,0.12)]"
+      className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_420px]"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-        <Image
-          src={productImage(product)}
-          alt={product.adi}
-          fill
-          sizes="450px"
-          className="object-cover"
-          priority
-        />
-        <div className="absolute left-4 top-4 flex gap-2">
-          <Badge variant={product.stokMiktari > 0 ? "green" : "gold"}>
-            {product.stokMiktari > 0 ? "Stokta" : "Ön sipariş"}
-          </Badge>
-          {category ? <Badge variant="outline">{category.adi}</Badge> : null}
-        </div>
-      </div>
+      <div className="space-y-4">
+        <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-[0_22px_55px_rgba(32,24,15,0.12)]">
+          <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+            {activeMedia ? (
+              activeMedia.kind === "video" ? (
+                <video
+                  key={activeMedia.id}
+                  className="h-full w-full object-cover"
+                  controls
+                  poster={productImage(product)}
+                >
+                  <source src={mediaUrl(activeMedia.url)} />
+                </video>
+              ) : (
+                <Image
+                  src={mediaUrl(activeMedia.url) || productImage(product)}
+                  alt={product.adi}
+                  fill
+                  sizes="(min-width: 1280px) 900px, 100vw"
+                  className="object-cover"
+                  priority
+                />
+              )
+            ) : (
+              <Image
+                src={productImage(product)}
+                alt={product.adi}
+                fill
+                sizes="(min-width: 1280px) 900px, 100vw"
+                className="object-cover"
+                priority
+              />
+            )}
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-4 py-4 text-white">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={product.stokMiktari > 0 ? "green" : "gold"}>
+                  {product.stokMiktari > 0 ? "Stokta" : "Ön sipariş"}
+                </Badge>
+                {category ? <Badge variant="outline">{category.adi}</Badge> : null}
+                {product.saticiDogrulanmis ? <Badge variant="green">Doğrulanmış satıcı</Badge> : null}
+                {mediaItems.length > 0 ? (
+                  <Badge variant="outline">
+                    {activeMediaIndex + 1}/{mediaItems.length} medya
+                  </Badge>
+                ) : null}
+              </div>
+              <h2 className="mt-3 text-2xl font-black leading-tight sm:text-4xl">{product.adi}</h2>
+              <p className="mt-2 flex items-center gap-1 text-sm font-semibold text-white/80">
+                <MapPin className="size-4" aria-hidden />
+                {productLocation(product)}
+              </p>
+            </div>
+          </div>
 
-      <div className="space-y-5 p-4">
-        <div>
-          <p className="flex items-center gap-1 text-sm font-semibold text-muted-foreground">
-            <MapPin className="size-4" aria-hidden />
-            {productLocation(product)}
-          </p>
-          <h2 className="mt-1 text-2xl font-black leading-tight tracking-normal text-brand-brown">
-            {product.adi}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {product.aciklama}
-          </p>
+          <div className="border-t border-border p-3 sm:p-4">
+            {mediaItems.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory">
+                {mediaItems.map((media, index) => {
+                  const isActive = index === activeMediaIndex;
+                  return (
+                    <button
+                      key={`${media.kind}-${media.id}`}
+                      type="button"
+                      onClick={() => setActiveMediaIndex(index)}
+                      className={cn(
+                        "relative h-24 w-36 shrink-0 overflow-hidden rounded-2xl border transition sm:h-28 sm:w-48 snap-center",
+                        isActive ? "border-primary ring-2 ring-primary/20" : "border-border",
+                      )}
+                    >
+                      {media.kind === "video" ? (
+                        <div className="relative grid h-full w-full place-items-center bg-background text-primary">
+                          <Video className="size-6" aria-hidden />
+                          <span className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white">
+                            Video
+                          </span>
+                        </div>
+                      ) : (
+                        <Image
+                          src={mediaUrl(media.url)}
+                          alt={`${product.adi} medya ${index + 1}`}
+                          fill
+                          sizes="(min-width: 1280px) 192px, 144px"
+                          className="object-cover"
+                        />
+                      )}
+                      <span
+                        className={cn(
+                          "absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                          isActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-black/70 text-white",
+                        )}
+                      >
+                        {index + 1}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <Metric label="Puan" value={product.ortalamaPuan.toFixed(1)} icon={Star} />
           <Metric label="Yorum" value={String(product.toplamYorum)} icon={MessageCircle} />
           <Metric label="Favori" value={String(product.toplamFavori)} icon={Heart} />
         </div>
 
-        <div className="rounded-lg border border-border bg-white p-4">
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                Satıcı
+                Satıcı güveni
               </p>
               <h3 className="mt-1 truncate font-bold">{sellerName(product)}</h3>
               <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
@@ -2068,15 +2147,18 @@ function ProductDetail({
             </div>
             <TrustDial score={shownTrust} />
           </div>
+          <p className="mt-4 text-sm leading-6 text-muted-foreground">
+            Doğrulanmış satıcı, gerçek stok ve canlı talep akışı birlikte gösterilir. Bu panel hızlı karar vermek için tasarlandı.
+          </p>
         </div>
 
-        <div className="rounded-lg border border-border bg-[#102a20] p-4 text-white">
+        <div className="rounded-3xl border border-border bg-white p-5 shadow-sm">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-sm text-emerald-50/[0.7]">Birim fiyat</p>
-              <p className="text-2xl font-black">{formatPrice(product.fiyat)}</p>
+              <p className="text-sm text-muted-foreground">Birim fiyat</p>
+              <p className="text-3xl font-black text-brand-brown">{formatPrice(product.fiyat)}</p>
             </div>
-            <p className="text-right text-xs font-semibold text-emerald-50/[0.7]">
+            <p className="text-right text-xs font-semibold text-muted-foreground">
               {product.stokMiktari} stok
               <br />
               Ürün ID {product.id}
@@ -2085,7 +2167,7 @@ function ProductDetail({
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Button
               variant="outline"
-              className="border-white/[0.2] bg-white/[0.08] text-white hover:bg-white/[0.14]"
+              className="border-border bg-background"
               onClick={() => onFavorite(product)}
               disabled={actionStatus === `favorite-${product.id}`}
             >
@@ -2094,68 +2176,78 @@ function ProductDetail({
               ) : (
                 <Heart className={cn(isFavorite && "fill-current")} aria-hidden />
               )}
-              {isFavorite ? "Çıkar" : "Favori"}
+              {isFavorite ? "Favoriden çıkar" : "Favori ekle"}
             </Button>
-            <Button
-              variant="outline"
-              className="border-white/[0.2] bg-white/[0.08] text-white hover:bg-white/[0.14]"
-              onClick={() => onOpenChat(product.saticiId)}
-            >
+            <Button variant="premium" onClick={() => onOpenChat(product.saticiId)}>
               <MessageCircle aria-hidden />
-              Mesaj
+              Mesaj gönder
             </Button>
           </div>
         </div>
+      </div>
 
-        <form
-          className="rounded-lg border border-border bg-white p-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            onDemand(product.id, miktar, note);
-          }}
-        >
-          <div className="flex items-center justify-between gap-3">
+      <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+        <div className="rounded-3xl border border-border bg-[#102a20] p-5 text-white shadow-[0_22px_55px_rgba(32,24,15,0.18)]">
+          <div className="flex items-start justify-between gap-4">
             <div>
-              <h3 className="font-bold">Talep aç</h3>
-              <p className="text-sm text-muted-foreground">
-                Anlaşma akışı ödeme/sipariş değil, satıcıyla mutabakat içindir.
-              </p>
+              <p className="text-sm text-emerald-50/70">Talep oluştur</p>
+              <h3 className="mt-1 text-xl font-black">Satıcıyla mutabakat başlat</h3>
             </div>
-            <Truck className="size-5 text-primary" aria-hidden />
+            <Truck className="size-5 text-emerald-50/85" aria-hidden />
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-[110px_1fr]">
-            <Input
-              type="number"
-              min={1}
-              max={100000}
-              value={miktar}
-              onChange={(event) => setMiktar(Number(event.target.value))}
-            />
-            <Input value={note} onChange={(event) => setNote(event.target.value)} />
-          </div>
-          <Button
-            className="mt-3 w-full"
-            variant="premium"
-            disabled={actionStatus === `demand-${product.id}`}
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onDemand(product.id, miktar, note);
+            }}
           >
-            {actionStatus === `demand-${product.id}` ? (
-              <Loader2 className="animate-spin" aria-hidden />
-            ) : (
-              <Send aria-hidden />
-            )}
-            Talep gönder
-          </Button>
-        </form>
+            <div className="grid gap-2 sm:grid-cols-[110px_1fr]">
+              <Input
+                type="number"
+                min={1}
+                max={100000}
+                value={miktar}
+                onChange={(event) => setMiktar(Number(event.target.value))}
+                className="border-white/10 bg-white/10 text-white placeholder:text-white/60"
+              />
+              <Input
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                className="border-white/10 bg-white/10 text-white placeholder:text-white/60"
+              />
+            </div>
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled={actionStatus === `demand-${product.id}`}
+            >
+              {actionStatus === `demand-${product.id}` ? (
+                <Loader2 className="animate-spin" aria-hidden />
+              ) : (
+                <Send aria-hidden />
+              )}
+              Talep gönder
+            </Button>
+          </form>
+        </div>
 
         <form
-          className="rounded-lg border border-border bg-white p-4"
+          className="rounded-3xl border border-border bg-white p-5 shadow-sm"
           onSubmit={(event) => {
             event.preventDefault();
             onRate(product.id, rating);
           }}
         >
-          <div className="grid gap-2 sm:grid-cols-[1fr_130px_auto] sm:items-end">
-            <Field label="Puan ver" htmlFor="rating">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold">Puan ver</h3>
+              <p className="text-sm text-muted-foreground">Ürünü deneyimledikten sonra değerlendir.</p>
+            </div>
+            <Star className="size-5 text-primary" aria-hidden />
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+            <Field label="Yıldız" htmlFor="rating">
               <select
                 id="rating"
                 value={rating}
@@ -2170,14 +2262,14 @@ function ProductDetail({
               </select>
             </Field>
             <Button disabled={actionStatus === `rating-${product.id}`}>
-              <Star aria-hidden />
+              <Check aria-hidden />
               Kaydet
             </Button>
           </div>
         </form>
 
         <form
-          className="rounded-lg border border-border bg-white p-4"
+          className="rounded-3xl border border-border bg-white p-5 shadow-sm"
           onSubmit={(event) => {
             event.preventDefault();
             if (comment.trim().length >= 3) {
@@ -2186,7 +2278,7 @@ function ProductDetail({
             }
           }}
         >
-          <Field label="Yorum yaz" htmlFor="comment">
+          <Field label="Kısa yorum" htmlFor="comment">
             <Input
               id="comment"
               value={comment}
@@ -2205,20 +2297,19 @@ function ProductDetail({
           </Button>
         </form>
 
-        <div className="rounded-lg border border-border bg-white">
-          <div className="border-b border-border px-4 py-3">
-            <h3 className="font-bold">Yorumlar</h3>
+        <div className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm">
+          <div className="border-b border-border px-5 py-4">
+            <h3 className="font-bold">Son yorumlar</h3>
           </div>
           <div className="divide-y divide-border">
             {product.yorumlar.length > 0 ? (
               product.yorumlar.slice(0, 4).map((commentItem) => (
-                <div key={commentItem.id} className="px-4 py-3">
+                <div key={commentItem.id} className="px-5 py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm leading-6">{commentItem.icerik}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {commentItem.kullaniciAdi ?? "Yöremio kullanıcısı"} ·{" "}
-                        {formatShortDate(commentItem.tarih)}
+                        {commentItem.kullaniciAdi ?? "Yöremio kullanıcısı"} · {formatShortDate(commentItem.tarih)}
                       </p>
                     </div>
                     {authUser?.userId === commentItem.kullaniciId ? (
@@ -2236,14 +2327,14 @@ function ProductDetail({
                 </div>
               ))
             ) : (
-              <p className="px-4 py-5 text-sm text-muted-foreground">
+              <p className="px-5 py-5 text-sm text-muted-foreground">
                 Bu ürün için henüz yorum yok.
               </p>
             )}
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </section>
   );
 }
 
